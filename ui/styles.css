@@ -1,0 +1,31 @@
+body {
+    background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    color: white;
+}
+
+.left-panel {
+    flex: 1;
+    padding: 80px;
+}
+
+.right-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    background: white;
+    color: black;
+    padding: 40px;
+    width: 360px;
+    border-radius: 10px;
+    text-align: center;
+}

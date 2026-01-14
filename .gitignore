@@ -1,0 +1,22 @@
+# Virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Secrets
+client_secret.json
+*.env
+
+# Database
+*.db
+
+# Media & biometric data
+*.wav
+faces/
+
+# Editor / OS files
+.vscode/
+.DS_Store

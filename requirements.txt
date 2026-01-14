@@ -1,0 +1,27 @@
+# ===== Core App =====
+streamlit
+numpy
+
+# ===== Computer Vision & Face Verification =====
+opencv-python
+deepface
+retina-face
+mtcnn
+
+# TensorFlow + Keras compatibility for DeepFace
+tensorflow>=2.15,<2.21
+tf-keras
+
+# ===== Speech to Text  =====
+SpeechRecognition
+
+# ===== Text to Speech =====
+gTTS
+playsound==1.2.2
+
+# ===== Google Gmail API =====
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
