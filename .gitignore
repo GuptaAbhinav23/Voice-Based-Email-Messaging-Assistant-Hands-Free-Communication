@@ -20,3 +20,5 @@ faces/
 # Editor / OS files
 .vscode/
 .DS_Store
+
+tempCodeRunnerFile.*
