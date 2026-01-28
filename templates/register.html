@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Account</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="card">
+    <h1>Create Account</h1>
+    <p class="subtitle">Enter your details</p>
+
+    <form method="POST" action="/register">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="email" name="email" placeholder="Email Address" required>
+        <input type="password" name="password" placeholder="Google App Password" required>
+        <button type="submit">Continue to Face Registration 📷</button>
+    </form>
+
+    <a class="link" href="/">Already have an account? Login</a>
+</div>
+</body>
+</html> 

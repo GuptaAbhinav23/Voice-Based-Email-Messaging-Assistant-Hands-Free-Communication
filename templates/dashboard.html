@@ -1,0 +1,142 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="app-container">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-title">FOLDERS</div>
+
+        <a href="/dashboard" class="folder active">
+            <span class="folder-icon"><i class="fa-solid fa-inbox"></i></span>
+            Inbox
+        </a>
+
+        <a href="/compose" class="folder">
+            <span class="folder-icon"><i class="fa-solid fa-pen-to-square"></i></span>
+            Compose
+        </a>
+
+        <a href="/sent" class="folder">
+            <span class="folder-icon"><i class="fa-solid fa-paper-plane"></i></span>
+            Sent
+        </a>
+
+
+        <div class="sidebar-title" style="margin-top:30px;">VOICE ASSISTANT</div>
+        <button onclick="startVoiceAssistant()" class="voice-btn">🎤 Speak</button>
+        <div id="voiceStatus" class="voice-status"></div>
+
+
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header-row">
+            <div>
+                <h2>Your Inbox</h2>
+                <p class="subtitle">Welcome, {{ user }}</p>
+            </div>
+            <input class="search-bar" placeholder="Search emails...">
+        </div>
+
+        <!-- Email List -->
+        <div class="email-list">
+            {% for mail in emails %}
+            <div class="email-card">
+                <div class="avatar">{{ mail['from'][0] }}</div>
+                <div class="email-info">
+                    <div class="email-top">
+                        <b>{{ mail['from'] }}</b>
+                        <span class="time">• {{ mail.date if mail.date else "" }}</span>
+                    </div>
+                    <div class="subject">{{ mail.subject }}</div>
+                    <div class="snippet">{{ mail.snippet }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+<script>
+const voiceStatus = document.getElementById("voiceStatus");
+
+const synth = window.speechSynthesis;
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = "en-IN";
+recognition.continuous = false;
+recognition.interimResults = false;
+
+// 🔊 Speak function
+function speak(text){
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.rate = 0.95;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(speech);
+}
+
+// 🎤 Main voice button function
+function startVoiceAssistant(){
+    voiceStatus.innerText = "🎧 Listening...";
+    recognition.start();
+}
+
+// 🎧 When speech detected
+recognition.onresult = function(event) {
+    const command = event.results[0][0].transcript.toLowerCase();
+    voiceStatus.innerText = "🗣 You said: " + command;
+
+    // -------- NAVIGATION --------
+    if (command.includes("open compose")) {
+        speak("Opening compose page");
+        setTimeout(()=> window.location.href="/compose", 1000);
+        return;
+    }
+
+    if (command.includes("open sent")) {
+        speak("Opening sent mail");
+        setTimeout(()=> window.location.href="/sent", 1000);
+        return;
+    }
+
+    if (command.includes("logout")) {
+        speak("Logging out");
+        setTimeout(()=> window.location.href="/logout", 1000);
+        return;
+    }
+
+    // -------- START COMPOSE BY VOICE --------
+    if (
+        command.includes("send mail") ||
+        command.includes("compose mail") ||
+        command.includes("write email") ||
+        command.includes("new email")
+    ) {
+        speak("Opening compose page");
+        setTimeout(()=> window.location.href="/compose", 1000);
+        return;
+    }
+
+    // -------- EMAIL READING (backend logic) --------
+    fetch("/voice_command", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({command: command})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.reply){
+            speak(data.reply);
+        } else {
+            speak("Sorry, I didn't understand");
+        }
+    });
+};
+
+recognition.onerror = function() {
+    voiceStatus.innerText = "❌ Could not hear properly";
+};
+</script>
+
+{% endblock %}

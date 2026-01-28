@@ -1,0 +1,37 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Email</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="navbar">
+    <div class="brand">
+        <div class="brand-icon">
+            <i class="fa-solid fa-envelope-open-text"></i>
+        </div>
+        <div class="brand-text">
+            <div class="title">Voice Email</div>
+            <div class="subtitle">Secure Assistant</div>
+        </div>
+    </div>
+
+    {% if session.get('user') %}
+    <div class="nav-right">
+        👤 {{ session['user'] }} |
+        <a href="/logout">Logout</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+
+{% block content %}{% endblock %}
+
+</body>
+</html>

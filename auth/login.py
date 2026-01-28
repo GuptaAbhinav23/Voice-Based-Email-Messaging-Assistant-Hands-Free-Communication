@@ -1,44 +1,37 @@
-import streamlit as st
 from database.db import get_db
 from biometric.capture_face import capture_face_image
 from biometric.verify_face import verify_faces
 
-def login():
-    st.subheader("🔐 Login")
+def login_user(username: str) -> bool:
+    """
+    Verifies a user using face recognition.
+    Returns True if verified, else False.
+    """
 
-    username = st.text_input("Username")
+    if not username:
+        return False
 
-    if st.button("Verify Face & Login"):
-        if not username:
-            st.error("Username required")
-            return
+    conn = get_db()
+    c = conn.cursor()
 
-        conn = get_db()
-        c = conn.cursor()
+    # Fetch stored face image path
+    c.execute(
+        "SELECT face_path FROM users WHERE username=?",
+        (username,)
+    )
+    row = c.fetchone()
+    conn.close()
 
-        # STEP 2: fetch image path from DB
-        c.execute(
-            "SELECT face_image FROM users WHERE username=?",
-            (username,)
-        )
-        row = c.fetchone()
-        conn.close()
+    if not row:
+        return False
 
-        if not row:
-            st.error("User not found")
-            return
+    db_face_image = row[0]  # path stored in DB
 
-        db_face_image = row[0]   # ✅ THIS IS A PATH (string)
+    # Capture live face
+    live_face_path = capture_face_image(
+        filename=f"live_{username}.jpg"
+    )
 
-        st.info("📷 Camera is on. Look straight.")
-        live_face_path = capture_face_image()
-
-        # STEP 4: verify using DeepFace
-        if verify_faces(db_face_image, live_face_path):
-            st.success("✅ Login successful")
-            st.session_state.user = username
-        else:
-            st.error("❌ Face verification failed")
-
-
+    # Verify faces
+    return verify_faces(db_face_image, live_face_path)
 

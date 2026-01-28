@@ -1,201 +1,294 @@
-import streamlit as st
+# Import required libraries from Flask
+from flask import Flask, render_template, request, redirect, session, jsonify
 
-# ---------- DATABASE ----------
+# Import database helper functions
 from database.db import create_table, get_db
 
-# ---------- AUTH ----------
+# Import authentication logic
 from auth.register import register
-from biometric.verify_face import verify_faces
+from auth.login import login_user
+
+# Import face capture function
 from biometric.capture_face import capture_face_image
 
-# ---------- GMAIL ----------
+# Import Gmail API functions
 from gmail.gmail_auth import get_service, get_gmail_token
 from gmail.inbox import get_inbox
+from gmail.send_mail import send_mail
 
-# ---------- VOICE ----------
-from voice.speech_to_text import listen
-from voice.text_to_speech import speak
+import re
+import base64
 
-# ======================================================
-# ⚙️ INITIAL SETUP
-# ======================================================
-st.set_page_config(page_title="Voice Based Gmail", page_icon="🎤")
+# Create Flask app instance
+app = Flask(__name__)
+
+# Secret key used to manage sessions securely
+app.secret_key = "voice-email-secret"
+
+# Create database table when app starts (if not exists)
 create_table()
-st.title("🎤 Voice Based Gmail")
-
-# ======================================================
-# 🧠 SESSION
-# ======================================================
-if "user" not in st.session_state:
-    st.session_state.user = None
 
 
-# ======================================================
-# 📌 SIDEBAR MENU
-# ======================================================
-menu = ["Register", "Login", "Inbox"]
-choice = st.sidebar.selectbox("Menu", menu)
+# ---------------- HOME PAGE ----------------------------
+@app.route("/")
+def home():
+    # If user already logged in, go to dashboard
+    if "user" in session:
+        return redirect("/dashboard")
+
+    # Otherwise show login page
+    return render_template("login.html")
 
 
-# ======================================================
-# 🚪 LOGOUT (SIDEBAR)
-# ======================================================
-if st.session_state.user:
-    if st.sidebar.button("🚪 Logout"):
-        st.session_state.user = None
-        st.success("Logged out successfully")
-        st.rerun()
+# ---------------- REGISTER ------------------------
+@app.route("/register", methods=["GET", "POST"])
+def register_page():
+    if request.method == "POST":
+        # Get form data
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+
+        # Capture user's face image using webcam
+        face_path = capture_face_image(filename=f"{username}.jpg")
+
+        # Save user details in database
+        register(username, email, password, face_path)
+
+        # Redirect to login page after registration
+        return redirect("/")
+
+    # Show registration page
+    return render_template("register.html")
 
 
-# ======================================================
-# 📝 REGISTER
-# ======================================================
-if choice == "Register":
-    st.subheader("📝 Register")
+# ---------------- LOGIN WITH FACE ----------------
+@app.route("/login", methods=["POST"])
+def login():
+    username = request.form["username"]
 
-    username = st.text_input("Username")
-    app_password = st.text_input("Google App Password", type="password")
+    # Verify face and login
+    if login_user(username):
+        session["user"] = username  # Store username in session
+        return redirect("/dashboard")
 
-    if st.button("Register"):
-        if not username or not app_password:
-            st.error("Please fill all fields")
-        else:
-            st.info("📷 Look at the camera")
-            face_path = capture_face_image(filename=f"{username}.jpg")
-            register(username, app_password, face_path)
-            st.success("✅ Registration successful")
+    return "Face verification failed"
 
 
-# ======================================================
-# 🔐 LOGIN
-# ======================================================
-elif choice == "Login":
-    st.subheader("🔐 Login")
-    username = st.text_input("Username")
+# ---------------- DASHBOARD (INBOX) -----------------------
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect("/")
 
-    if st.button("Verify Face & Login"):
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("SELECT face_image FROM users WHERE username=?", (username,))
-        row = c.fetchone()
+    username = session["user"]
 
-        if not row:
-            st.error("❌ User not found")
-            st.stop()
-
-        live_face = capture_face_image(filename=f"live_{username}.jpg")
-
-        if verify_faces(row[0], live_face):
-            st.session_state.user = username
-            st.success("✅ Login successful")
-        else:
-            st.error("❌ Face verification failed")
-
-
-# ======================================================
-# 📬 INBOX + VOICE ASSISTANT
-# ======================================================
-elif choice == "Inbox":
-
-    if not st.session_state.user:
-        st.error("❌ Please login first")
-        st.stop()
-
-    username = st.session_state.user
+    # Get Gmail token from database
     conn = get_db()
     c = conn.cursor()
-
     c.execute("SELECT gmail_token FROM users WHERE username=?", (username,))
-    token = c.fetchone()[0]
+    row = c.fetchone()
+    conn.close()
 
+    token = row[0] if row else None
+
+    # If Gmail not connected yet, redirect to connect page
     if token is None:
-        st.info("🔐 Gmail not connected")
-        if st.button("Connect Gmail"):
-            token = get_gmail_token()
-            c.execute(
-                "UPDATE users SET gmail_token=? WHERE username=?",
-                (token, username)
-            )
-            conn.commit()
-            st.success("✅ Gmail connected")
-            st.rerun()
-        st.stop()
+        return redirect("/connect_gmail")
 
-    # ---------- LOAD INBOX ----------
+    # Create Gmail API service
     service = get_service(token)
+
+    # Fetch inbox emails
     emails = get_inbox(service)
 
-    # ==================================================
-    # 📬 INBOX UI (SIMPLE LIST)
-    # ==================================================
-    st.subheader("📬 Inbox")
+    return render_template("dashboard.html", emails=emails)
 
-    for i, mail in enumerate(emails):
-        st.markdown(f"**{i+1}.** {mail['snippet']}")
 
-    # ==================================================
-    # 🎙 VOICE ASSISTANT
-    # ==================================================
-    st.divider()
-    st.subheader("🎙 Voice Assistant")
+# ---------------- CONNECT GMAIL ----------------
+@app.route("/connect_gmail")
+def connect_gmail():
+    if "user" not in session:
+        return redirect("/")
 
-    status_box = st.empty()
-    result_box = st.empty()
+    # Get Gmail OAuth token
+    token = get_gmail_token()
 
-    def extract_number(text):
-        words = {
-            "one": 1, "two": 2, "three": 3,
-            "four": 4, "five": 5
-        }
-        for w, n in words.items():
-            if w in text:
-                return n
-        for t in text.split():
-            if t.isdigit():
-                return int(t)
-        return None
+    # Save token in database
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE users SET gmail_token=? WHERE username=?", (token, session["user"]))
+    conn.commit()
+    conn.close()
 
-    if st.button("🎤 Speak"):
-        status_box.info("🎧 Listening...")
+    return redirect("/dashboard")
 
-        try:
-            command = listen().lower().strip()
-            status_box.success("✅ Listening stopped")
 
-            if not command:
-                result_box.error("❌ Could not understand speech")
-                speak("I could not understand you")
-                st.stop()
+# ---------------- GET FULL EMAIL BODY ----------------
+def get_full_email(service, msg_id):
+    # Fetch full email data from Gmail
+    msg = service.users().messages().get(userId="me", id=msg_id, format="full").execute()
 
-            result_box.success(f"🗣 You said: **{command}**")
+    parts = msg["payload"].get("parts")
+    body = ""
 
-            # -------- LOGOUT BY VOICE --------
-            if "logout" in command or "log out" in command:
-                speak("Logging out")
-                st.session_state.user = None
-                st.success("Logged out successfully")
-                st.rerun()
+    # Decode email body
+    if parts:
+        for part in parts:
+            if part["mimeType"] == "text/plain":
+                data = part["body"]["data"]
+                body = base64.urlsafe_b64decode(data).decode("utf-8")
+                break
+    else:
+        data = msg["payload"]["body"].get("data")
+        if data:
+            body = base64.urlsafe_b64decode(data).decode("utf-8")
 
-            # -------- READ EMAIL (SNIPPET ONLY) --------
-            elif "read email" in command or "read mail" in command:
-                num = extract_number(command)
+    return body[:2000]  # Return first 2000 characters
 
-                if not num or num > len(emails):
-                    speak("Invalid email number")
-                    st.error("Invalid email number")
-                    st.stop()
 
-                email_meta = emails[num - 1]
+# ---------------- VOICE COMMAND PROCESSING ----------------
+@app.route("/voice_command", methods=["POST"])
+def voice_command():
+    # Get spoken command from frontend
+    command = request.json.get("command", "").lower().strip()
+    print("🎙 Heard:", command)
 
-                speak(
-                    f"Reading email {num}. "
-                    f"{email_meta['snippet']}"
-                )
+    # Convert spoken numbers into digits
+    word_to_num = {
+        "one": "1", "first": "1",
+        "two": "2", "second": "2",
+        "three": "3", "third": "3",
+        "four": "4", "fourth": "4",
+        "five": "5", "fifth": "5"
+    }
 
-            else:
-                speak("Command not recognized")
-                st.warning("Command not recognized")
+    for word, num in word_to_num.items():
+        command = command.replace(word, num)
 
-        except Exception as e:
-            status_box.error("❌ Voice command failed")
-            st.error(str(e))
+    # Clean extra words that break pattern
+    command = command.replace("the ", "")
+    command = command.replace("my ", "")
+    command = command.replace("number ", "")
+    command = command.replace("email number", "email")
+
+    print("🧠 Cleaned Command:", command)
+
+    # Match "read email X"
+    match = re.search(r"read\s*email\s*(\d+)", command)
+
+    if match:
+        index = int(match.group(1)) - 1
+        print("📨 Email Index Requested:", index + 1)
+
+        # Get Gmail token
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT gmail_token FROM users WHERE username=?", (session["user"],))
+        token = c.fetchone()[0]
+        conn.close()
+
+        service = get_service(token)
+        emails = get_inbox(service)
+
+        # If valid email number
+        if 0 <= index < len(emails):
+            email = emails[index]
+
+            sender = email.get("from", "Unknown sender")
+            subject = email.get("subject", "No subject")
+            snippet = email.get("snippet", "")
+
+            voice_summary = f"Email from {sender}. Subject: {subject}. Preview: {snippet}"
+            return jsonify(reply=voice_summary)
+
+        return jsonify(reply="That email number does not exist.")
+
+    return jsonify(reply="Sorry, I did not understand. Say read email 1")
+
+
+# ---------------- COMPOSE PAGE ----------------
+@app.route("/compose")
+def compose():
+    if "user" not in session:
+        return redirect("/")
+
+    # Get user's email address from database
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT email FROM users WHERE username=?", (session["user"],))
+    row = c.fetchone()
+    conn.close()
+
+    user_email = row[0] if row else ""
+
+    return render_template("compose.html", user_email=user_email)
+
+
+# ---------------- SEND MAIL ----------------
+@app.route("/send_mail", methods=["POST"])
+def send_mail_route():
+    if "user" not in session:
+        return jsonify({"message": "Not logged in"})
+
+    data = request.json
+    to = data.get("to")
+    subject = data.get("subject")
+    message = data.get("message")
+
+    if not to or not subject or not message:
+        return jsonify({"message": "Missing email fields"})
+
+    # Get Gmail token
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT gmail_token FROM users WHERE username=?", (session["user"],))
+    row = c.fetchone()
+    conn.close()
+
+    if not row or not row[0]:
+        return jsonify({"message": "Gmail not connected"})
+
+    token = row[0]
+    service = get_service(token)
+
+    try:
+        # Send email using Gmail API
+        send_mail(service, to, subject, message)
+        return jsonify({"message": "Email sent successfully ✅"})
+    except Exception as e:
+        print("SEND ERROR:", e)
+        return jsonify({"message": "Failed to send email"})
+
+
+# ---------------- SENT PAGE ----------------
+@app.route("/sent")
+def sent():
+    if "user" not in session:
+        return redirect("/")
+
+    # Get Gmail token
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT gmail_token FROM users WHERE username=?", (session["user"],))
+    token = c.fetchone()[0]
+    conn.close()
+
+    service = get_service(token)
+
+    # Fetch sent emails instead of inbox
+    sent_mails = get_inbox(service, label="SENT")
+    return render_template("sent.html", emails=sent_mails, user=session["user"])
+
+
+# ---------------- LOGOUT ----------------
+@app.route("/logout")
+def logout():
+    session.clear()  # Clear session data
+    return redirect("/")
+
+
+# ---------------- RUN APP ----------------
+if __name__ == "__main__":
+    print("🚀 Starting Flask Server...")
+    app.run(debug=True, use_reloader=False)

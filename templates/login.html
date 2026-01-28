@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure Voice Email</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="card">
+    <h1>Secure Voice Email</h1>
+    <p class="subtitle">Login using Face Authentication</p>
+
+    <form method="POST" action="/login">
+        <input type="text" name="username" placeholder="Enter Username" required>
+        <button type="submit">Authenticate with Face →</button>
+    </form>
+
+    <a class="link" href="/register">New User? Register Here</a>
+</div>
+<!-- Camera Modal -->
+<div id="cameraModal" class="camera-modal" style="display:none;">
+    <div class="camera-box">
+        <video id="video" autoplay></video>
+        <button onclick="captureAndSubmit()">Capture & Login</button>
+        <button onclick="closeCamera()">Cancel</button>
+    </div>
+</div>
+
+<script>
+const form = document.querySelector("form");
+const modal = document.getElementById("cameraModal");
+const video = document.getElementById("video");
+let stream;
+
+form.addEventListener("submit", function(e){
+    e.preventDefault(); // stop normal submit
+    openCamera();
+});
+
+function openCamera(){
+    modal.style.display = "flex";
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+            stream = s;
+            video.srcObject = stream;
+        });
+}
+
+function closeCamera(){
+    modal.style.display = "none";
+    if(stream) stream.getTracks().forEach(t => t.stop());
+}
+
+function captureAndSubmit(){
+    closeCamera();
+    form.submit(); // now submit to backend for face verification
+}
+</script>
+
+</body>
+</html> 

@@ -1,0 +1,185 @@
+
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="app-container">
+
+    <!-- Sidebar (same style as dashboard) -->
+    <div class="sidebar">
+        <div class="sidebar-title">FOLDERS</div>
+        <a href="/dashboard" class="folder">
+            <span class="folder-icon"><i class="fa-solid fa-inbox"></i></span>
+            Inbox
+        </a>
+
+        <a href="/compose" class="folder active">
+            <span class="folder-icon"><i class="fa-solid fa-pen-to-square"></i></span>
+            Compose
+        </a>
+
+        <a href="/sent" class="folder">
+            <span class="folder-icon"><i class="fa-solid fa-paper-plane"></i></span>
+            Sent
+        </a>
+
+        
+        <div class="sidebar-title" style="margin-top:30px;">VOICE ASSISTANT</div>
+        <button onclick="startVoiceCompose()" class="voice-btn">🎤 Speak</button>
+
+        <!-- Voice Assistant Display Area -->
+        <div id="voiceOutput" class="voice-assistant-box"></div>
+    </div>
+
+    <!-- Main Content -->
+<div class="main-content">
+    <div class="header-row">
+        <div>
+            <h2>Compose Email</h2>
+            <p class="subtitle">Send a new message</p>
+        </div>
+    </div>
+
+    <div class="compose-form">
+
+        <label>From</label>
+        <input type="email" value="{{ user_email }}" readonly>
+
+        <label>To</label>
+        <input type="email" id="to" placeholder="Recipient email">
+
+        <label>Subject</label>
+        <input type="text" id="subject" placeholder="Email subject">
+
+        <label>Message</label>
+        <textarea id="message" placeholder="Type or speak your message"></textarea>
+
+        <button class="send-btn" onclick="sendMail()">Send</button>
+    </div>
+</div>
+
+<script>
+const synth = window.speechSynthesis;
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = "en-IN";
+recognition.continuous = false;
+recognition.interimResults = false;
+
+const output = document.getElementById("voiceOutput");
+
+let emailData = { to:"", subject:"", message:"" };
+let isListening = false;
+
+// ----------- SHOW SYSTEM MESSAGE ONLY -----------
+function showSystem(text){
+    output.innerHTML += `<div>🤖 ${text}</div>`;
+    output.scrollTop = output.scrollHeight;
+}
+
+// ----------- SPEAK FUNCTION -----------
+function speak(text, next=null){
+    showSystem(text);
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.9;
+    u.onend = () => setTimeout(()=> next && next(), 600);
+    synth.cancel();
+    synth.speak(u);
+}
+
+// ----------- LISTEN FUNCTION (NO DISPLAY OF USER SPEECH) -----------
+function listen(callback){
+    if(isListening) recognition.stop();
+
+    showSystem("🎧 Listening...");
+    isListening = true;
+    recognition.start();
+    recognition.onresult = e => {
+        isListening = false;
+        const speech = e.results[0][0].transcript;
+        callback(speech); // DO NOT DISPLAY USER SPEECH
+    };
+
+    recognition.onerror = () => {
+        isListening = false;
+        speak("I didn't catch that, please repeat.", ()=> listen(callback));
+    };
+}
+
+// ----------- EMAIL CLEANER -----------
+function cleanEmail(text) {
+    const numberMap = {
+        "zero": "0","one": "1","two": "2","three": "3","four": "4",
+        "five": "5","six": "6","seven": "7","eight": "8","nine": "9"
+    };
+
+    text = text.toLowerCase();
+    Object.keys(numberMap).forEach(word => {
+        text = text.replace(new RegExp(`\\b${word}\\b`, "g"), numberMap[word]);
+    });
+
+    text = text
+        .replace(/ at /g, "@")
+        .replace(/ dot /g, ".")
+        .replace(/ underscore /g, "_")
+        .replace(/ dash /g, "-")
+        .replace(/\s+/g, "");
+    
+    text = text.replace(/[.,]+$/, "");
+    return text;
+}
+
+// ----------- VOICE FLOW -----------
+function startVoiceCompose(){
+    output.innerHTML = "";
+
+    speak("Tell me the recipient email address", ()=>{
+        listen(text=>{
+            emailData.to = cleanEmail(text);
+            document.getElementById("to").value = emailData.to;
+
+            speak("Tell me the subject", ()=>{
+                listen(text=>{
+                    emailData.subject = text;
+                    document.getElementById("subject").value = text;
+
+                    speak("Speak your message", ()=>{
+                        listen(text=>{
+                            emailData.message = text;
+                            document.getElementById("message").value = text;
+
+                            let review = `You are sending email to ${emailData.to}. Subject ${emailData.subject}. Message recorded. Say yes to send or no to cancel.`;
+
+                            speak(review, ()=>{
+                                listen(text=>{
+                                    if(text.toLowerCase().includes("yes")){
+                                        speak("Sending your email");
+                                        sendMail();
+                                    } else {
+                                        speak("Email cancelled");
+                                    }
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+}
+
+// ----------- SEND MAIL -----------
+function sendMail(){
+    fetch("/send_mail",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(emailData)
+    })
+    .then(res=>res.json())
+    .then(d=>{
+        speak(d.message);
+        setTimeout(()=> window.location.href="/sent", 2000);
+    });
+}
+</script>
+
+
+{% endblock %}  

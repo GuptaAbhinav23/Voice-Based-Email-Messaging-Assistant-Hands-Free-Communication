@@ -1,5 +1,9 @@
-import sounddevice as sd
+import sqlite3
 
-devices = sd.query_devices()
-for i, device in enumerate(devices):
-    print(i, device['name'], device['max_input_channels'])
+conn = sqlite3.connect("database.db")
+c = conn.cursor()
+c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+conn.commit()
+conn.close()
+
+print("Email column added successfully!")

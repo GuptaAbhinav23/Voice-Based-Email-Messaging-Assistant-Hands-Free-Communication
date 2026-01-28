@@ -4,7 +4,7 @@ def listen():
     r = sr.Recognizer()
 
     # ---------------- TUNING PARAMETERS ----------------
-    r.pause_threshold = 1.2          
+    r.pause_threshold = 1.2
     r.phrase_threshold = 0.3
     r.non_speaking_duration = 0.8
 
@@ -12,19 +12,21 @@ def listen():
         r.adjust_for_ambient_noise(source, duration=1)
         print("🎤 Listening... Speak full command")
 
-        audio = r.listen(
-            source,
-            timeout=6,
-            phrase_time_limit=8   
-        )
+        try:
+            audio = r.listen(
+                source,
+                timeout=6,
+                phrase_time_limit=8
+            )
+        except sr.WaitTimeoutError:
+            return None   # 👈 IMPORTANT
 
     try:
         text = r.recognize_google(audio, language="en-IN")
         return text.lower()
 
     except sr.UnknownValueError:
-        return "UNKNOWN"
+        return None
+
     except sr.RequestError:
-        return "ERROR"
-
-
+        return None

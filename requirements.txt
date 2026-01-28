@@ -1,6 +1,10 @@
 # ===== Core App =====
-streamlit
+flask
+flask-session
+python-dotenv
+requests
 numpy
+Pillow
 
 # ===== Computer Vision & Face Verification =====
 opencv-python
@@ -12,8 +16,9 @@ mtcnn
 tensorflow>=2.15,<2.21
 tf-keras
 
-# ===== Speech to Text  =====
+# ===== Speech to Text =====
 SpeechRecognition
+pyaudio
 
 # ===== Text to Speech =====
 gTTS
@@ -24,4 +29,3 @@ google-api-python-client
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
-

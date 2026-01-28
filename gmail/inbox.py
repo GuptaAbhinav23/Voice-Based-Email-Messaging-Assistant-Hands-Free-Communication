@@ -1,39 +1,44 @@
-def get_inbox(service, max_results=5):
+def get_inbox(service, label="INBOX"):
+    # Map friendly name to Gmail label ID
+    label_map = {
+        "INBOX": "INBOX",
+        "SENT": "SENT"
+    }
+
+    label_id = label_map.get(label.upper(), "INBOX")
+
     results = service.users().messages().list(
-        userId="me",
-        labelIds=["INBOX"],
-        maxResults=max_results
+        userId='me',
+        labelIds=[label_id],
+        maxResults=10
     ).execute()
 
-    messages = results.get("messages", [])
-    inbox = []
+    messages = results.get('messages', [])
+    emails = []
 
     for msg in messages:
-        msg_data = service.users().messages().get(
-            userId="me",
-            id=msg["id"],
-            format="metadata"   # 🔥 FAST
-        ).execute()
+        msg_data = service.users().messages().get(userId='me', id=msg['id']).execute()
+        headers = msg_data['payload']['headers']
 
-        headers = msg_data["payload"]["headers"]
-
-        subject = ""
-        sender = ""
+        email = {
+            "id": msg['id'],
+            "from": "",
+            "to": "",
+            "subject": "",
+            "snippet": msg_data.get("snippet", "")
+        }
 
         for h in headers:
-            if h["name"] == "Subject":
-                subject = h["value"]
-            if h["name"] == "From":
-                sender = h["value"]
+            if h['name'] == 'From':
+                email['from'] = h['value']
+            if h['name'] == 'To':
+                email['to'] = h['value']
+            if h['name'] == 'Subject':
+                email['subject'] = h['value']
 
-        inbox.append({
-            "id": msg["id"],
-            "from": sender,
-            "subject": subject,
-            "snippet": msg_data.get("snippet", "")
-        })
+        emails.append(email)
 
-    return inbox
+    return emails
 
 
 
