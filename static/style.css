@@ -306,3 +306,88 @@ body {
     color: white;
     cursor: pointer;
 }
+
+/* ===== AUTH PAGES (LOGIN / REGISTER) ===== */
+.card {
+    width: 380px;
+    margin: 100px auto;
+    padding: 40px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(15px);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    text-align: center;
+}
+
+.subtitle {
+    color: #94a3b8;
+    margin-bottom: 25px;
+}
+
+.card input {
+    width: 100%;
+    padding: 12px;
+    margin: 12px 0;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 14px;
+}
+
+.card button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    background: linear-gradient(90deg, #00d4ff, #7c3aed);
+    color: white;
+    margin-top: 15px;
+    transition: 0.3s;
+}
+
+.card button:hover {
+    transform: scale(1.05);
+}
+
+.link {
+    margin-top: 20px;
+    display: block;
+    color: #38bdf8;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+.platform-options {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+
+.platform-btn {
+    padding: 20px 40px;
+    font-size: 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.gmail {
+    background-color: #EA4335;
+    color: white;
+}
+
+.whatsapp {
+    background-color: #25D366;
+    color: white;
+}
+
+.platform-btn:hover {
+    transform: scale(1.05);
+}

@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+{% block content %}
+<div id="whatsapp-app" class="wa-container">
+  <div class="wa-sidebar">
+    <div class="wa-sidebar-header">Chats</div>
+    <ul id="chat-list" class="wa-chat-list"></ul>
+  </div>
+  <div class="wa-chat-area">
+    <div id="chat-header" class="wa-chat-header"></div>
+    <div id="message-list" class="wa-message-list"></div>
+    <div class="wa-input-bar">
+      <input id="wa-message-input" type="text" placeholder="Type a message..." autocomplete="off" />
+      <button id="wa-send-btn">Send</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.wa-container { display: flex; height: 80vh; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; background: #f7f7f7; }
+.wa-sidebar { width: 300px; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+.wa-sidebar-header { padding: 16px; font-weight: bold; border-bottom: 1px solid #eee; background: #25d366; color: #fff; }
+.wa-chat-list { flex: 1; list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.wa-chat-list li { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
+.wa-chat-list li.active, .wa-chat-list li:hover { background: #e6f7ee; }
+.wa-chat-header { padding: 14px 18px; background: #ededed; border-bottom: 1px solid #ddd; font-weight: bold; }
+.wa-message-list { flex: 1; padding: 18px; overflow-y: auto; background: #ece5dd; display: flex; flex-direction: column; gap: 8px; min-height: 300px; }
+.wa-message-bubble { max-width: 60%; padding: 10px 16px; border-radius: 18px; margin-bottom: 2px; font-size: 15px; position: relative; word-break: break-word; }
+.wa-message-bubble.sent { background: #dcf8c6; align-self: flex-end; }
+.wa-message-bubble.received { background: #fff; align-self: flex-start; }
+.wa-input-bar { display: flex; padding: 12px 16px; background: #f7f7f7; border-top: 1px solid #ddd; }
+#wa-message-input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ccc; outline: none; font-size: 15px; }
+#wa-send-btn { margin-left: 10px; background: #25d366; color: #fff; border: none; border-radius: 20px; padding: 8px 22px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+#wa-send-btn:hover { background: #128c7e; }
+.wa-forward-btn { background: none; border: none; color: #128c7e; cursor: pointer; font-size: 13px; margin-left: 8px; }
+@media (max-width: 700px) { .wa-container { flex-direction: column; } .wa-sidebar { width: 100%; height: 180px; border-right: none; border-bottom: 1px solid #ddd; } .wa-chat-area { flex: 1; } }
+</style>
+
+<script>
+let currentContact = null;
+
+function fetchChats() {
+  fetch('/get_whatsapp_chats')
+    .then(r => r.json())
+    .then(data => {
+      const chatList = document.getElementById('chat-list');
+      chatList.innerHTML = '';
+      (data.chats || []).forEach(chat => {
+        const li = document.createElement('li');
+        li.textContent = `${chat.name} — ${chat.last_message || ''}`;
+        li.onclick = () => selectChat(chat.name);
+        if (chat.name === currentContact) li.classList.add('active');
+        chatList.appendChild(li);
+      });
+    });
+}
+
+function selectChat(contact) {
+  currentContact = contact;
+  document.getElementById('chat-header').textContent = contact;
+  fetch(`/get_whatsapp_messages?contact_name=${encodeURIComponent(contact)}`)
+    .then(r => r.json())
+    .then(data => {
+      const msgList = document.getElementById('message-list');
+      msgList.innerHTML = '';
+      (data.messages || []).forEach(msg => {
+        const div = document.createElement('div');
+        div.className = 'wa-message-bubble ' + (msg.sent ? 'sent' : 'received');
+        div.textContent = msg.text;
+        if (!msg.sent) {
+          const fwdBtn = document.createElement('button');
+          fwdBtn.className = 'wa-forward-btn';
+          fwdBtn.textContent = 'Forward';
+          fwdBtn.onclick = () => forwardMessagePrompt(msg.text);
+          div.appendChild(fwdBtn);
+        }
+        msgList.appendChild(div);
+      });
+      msgList.scrollTop = msgList.scrollHeight;
+    });
+  fetchChats();
+}
+
+document.getElementById('wa-send-btn').onclick = function () {
+  const input = document.getElementById('wa-message-input');
+  const text = input.value.trim();
+  if (!text || !currentContact) return;
+  fetch('/send_whatsapp_message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contact_name: currentContact, message: text })
+  }).then(r => r.json()).then(() => {
+    input.value = '';
+    selectChat(currentContact);
+  });
+};
+
+document.getElementById('wa-message-input').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') document.getElementById('wa-send-btn').click();
+});
+
+function forwardMessagePrompt(message) {
+  const to = prompt('Forward to contact:');
+  if (!to) return;
+  fetch('/forward_whatsapp_message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to_contact: to, message })
+  }).then(r => r.json()).then(() => {
+    alert('Message forwarded!');
+  });
+}
+
+window.onload = function () {
+  fetchChats();
+};
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+
+<body class="platform-body">
+
+    <div class="platform-container">
+        <div class="platform-logo">🤖</div>
+        <h1 class="platform-title">Voice Communication Assistant</h1>
+        <p class="platform-subtitle">Select a service to continue</p>
+
+        <div class="platform-buttons">
+            <button onclick="location.href='/dashboard'" class="platform-btn gmail">
+                📧 Open Gmail
+            </button>
+
+            <button onclick="location.href='/whatsapp_dashboard'" class="platform-btn whatsapp">
+                💬 Open WhatsApp
+            </button>
+
+            <button onclick="startVoiceCommand()" class="platform-btn voice">
+                🎤 Speak Command
+            </button>
+        </div>
+    </div>
+
+<script>
+function startVoiceCommand() {
+    fetch("/platform_voice", { method: "POST" })
+    .then(res => res.json())
+    .then(data => {
+        if (data.redirect) {
+            window.location.href = data.redirect;
+        }
+    });
+}
+</script>
+
+</body>
+</html>

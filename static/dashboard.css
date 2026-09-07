@@ -1,0 +1,219 @@
+/* ===== PLATFORM PAGE ===== */
+
+.platform-body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: radial-gradient(circle at top left, #0f172a, #020617);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.platform-container {
+    text-align: center;
+    background: rgba(255,255,255,0.03);
+    padding: 50px 60px;
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 40px rgba(0,0,0,0.4);
+    width: 480px;
+}
+
+.platform-logo {
+    font-size: 42px;
+    margin-bottom: 15px;
+}
+
+.platform-title {
+    margin-bottom: 8px;
+    font-size: 26px;
+    font-weight: 600;
+}
+
+.platform-subtitle {
+    color: #94a3b8;
+    margin-bottom: 35px;
+}
+
+.platform-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.platform-btn {
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    font-weight: 500;
+}
+
+/* Gmail Button */
+.platform-btn.gmail {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+}
+
+/* WhatsApp Button */
+.platform-btn.whatsapp {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+}
+
+/* Voice Button */
+.platform-btn.voice {
+    background: #1e293b;
+    color: #38bdf8;
+    border: 1px solid #334155;
+}
+
+.platform-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+/* ===== WhatsApp Layout ===== */
+
+.wa-container {
+    display: flex;
+    height: calc(100vh - 60px);
+    background: #111b21;
+    color: white;
+}
+
+/* Sidebar */
+.wa-sidebar {
+    width: 30%;
+    background: #202c33;
+    border-right: 1px solid #2a3942;
+    display: flex;
+    flex-direction: column;
+}
+
+.wa-sidebar-header {
+    padding: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    border-bottom: 1px solid #2a3942;
+}
+
+.wa-search {
+    padding: 10px;
+}
+
+.wa-search input {
+    width: 100%;
+    padding: 8px;
+    border-radius: 20px;
+    border: none;
+    background: #2a3942;
+    color: white;
+}
+
+.wa-chat-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.wa-chat {
+    display: flex;
+    padding: 12px;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.wa-chat:hover,
+.wa-chat.active {
+    background: #2a3942;
+}
+
+.wa-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #00a884;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.wa-name {
+    font-weight: 600;
+}
+
+.wa-preview {
+    font-size: 13px;
+    color: #8696a0;
+}
+
+/* Chat Window */
+.wa-chat-window {
+    width: 70%;
+    display: flex;
+    flex-direction: column;
+}
+
+.wa-chat-header {
+    padding: 15px;
+    background: #202c33;
+    border-bottom: 1px solid #2a3942;
+    font-weight: bold;
+}
+
+.wa-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wa-message {
+    max-width: 60%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.received {
+    background: #202c33;
+    align-self: flex-start;
+}
+
+.sent {
+    background: #005c4b;
+    align-self: flex-end;
+}
+
+/* Input Bar */
+.wa-input-bar {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background: #202c33;
+}
+
+.wa-input-bar input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: none;
+    background: #2a3942;
+    color: white;
+}
+
+.wa-input-bar button {
+    background: #00a884;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
